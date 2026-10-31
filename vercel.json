@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/pwa",
+      "destination": "/pwa/",
+      "permanent": true
+    }
+  ]
+}
