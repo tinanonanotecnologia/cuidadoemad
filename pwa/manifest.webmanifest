@@ -1,0 +1,11 @@
+{
+  "name": "Cuidado em AD · Baralhos",
+  "short_name": "Cuidado em AD",
+  "description": "Baralhos para abrir conversas, refletir e cuidar.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f2e8",
+  "theme_color": "#1f4c41",
+  "lang": "pt-BR",
+  "icons": [{"src":"./assets/logo-tight.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
