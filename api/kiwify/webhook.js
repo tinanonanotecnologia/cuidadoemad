@@ -44,7 +44,10 @@ export default async function handler(req, res) {
   const expectedProduct = String(process.env.KIWIFY_PRODUCT_ID || '').trim();
   const productId = findValue(payload, ['product_id', 'productid', 'id_product', 'product']);
 
-  const eventText = JSON.stringify(payload).toLowerCase();
+  const eventText = [
+    findValue(payload, ['event', 'event_type', 'type']),
+    findValue(payload, ['status', 'order_status', 'payment_status', 'payment_state'])
+  ].filter(Boolean).join(' ').toLowerCase();
   const email = findValue(payload, ['email', 'customer_email', 'buyer_email', 'purchaser_email']).trim().toLowerCase();
   if (!email) return res.status(422).json({ error: 'buyer_email_missing' });
   const orderId = findValue(payload, ['order_id', 'orderid', 'transaction_id', 'transactionid', 'subscription_id']) || crypto.createHash('sha256').update(raw).digest('hex');
