@@ -67,22 +67,40 @@ decks.forEach(deck=>{deck.cardCount=cardCounts[deck.id]||deck.cards.length});
 const app=document.querySelector('#app');
 const toastEl=document.querySelector('#toast');
 const backButton=document.querySelector('[data-action="back"]');
-const state={screen:'home',deckId:null,cardIndex:null};
+const state={screen:'home',deckId:null,cardIndex:null,facilitator:false};
 const notesKey='cuidado-em-ad-notes-v1';
+const libraryKey='cuidado-em-ad-library-v1';
+const onboardingKey='cuidado-em-ad-onboarding-v1';
 const getDeck=id=>decks.find(deck=>deck.id===id)||decks[0];
-const getNotes=()=>JSON.parse(localStorage.getItem(notesKey)||'{}');
+const getNotes=()=>{try{return JSON.parse(localStorage.getItem(notesKey)||'{}')}catch{return {}}};
+const getLibrary=()=>{try{return JSON.parse(localStorage.getItem(libraryKey)||'{"seen":{},"history":[],"favorites":[]}')}catch{return {seen:{},history:[],favorites:[]}}};
+const saveLibrary=value=>localStorage.setItem(libraryKey,JSON.stringify(value));
+const favoriteKey=(deckId,index)=>`${deckId}-${index}`;
 const showToast=message=>{toastEl.textContent=message;toastEl.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toastEl.classList.remove('show'),2600)};
 const esc=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const cardText=(deck,index)=>{const card=deck.cards?.[index];return card?`${card[0]}. ${card[1]}`:`Carta ${index+1} do baralho ${deck.title}. Consulte a imagem da carta para o conteúdo completo.`};
+const recordCard=(deck,index)=>{const library=getLibrary();const key=favoriteKey(deck.id,index);library.seen[key]=(library.seen[key]||0)+1;library.history=[{deckId:deck.id,index,at:new Date().toISOString()},...(library.history||[]).filter(item=>!(item.deckId===deck.id&&item.index===index))].slice(0,20);saveLibrary(library)};
+const seenCount=deck=>{const library=getLibrary();return Array.from({length:deck.cardCount},(_,index)=>library.seen[favoriteKey(deck.id,index)]?1:0).reduce((a,b)=>a+b,0)};
+const isFavorite=(deck,index)=>getLibrary().favorites.includes(favoriteKey(deck.id,index));
+const favoriteCount=deck=>getLibrary().favorites.filter(key=>key.startsWith(`${deck.id}-`)).length;
+const safeDate=value=>{try{return new Date(value).toLocaleDateString('pt-BR')}catch{return ''}};
 
 function render(){
-  backButton.classList.toggle('is-hidden',state.screen==='home');
+  backButton.classList.toggle('is-hidden',state.screen==='home'||state.screen==='onboarding');
+  if(state.screen==='onboarding')renderOnboarding();
   if(state.screen==='home')renderHome();
   if(state.screen==='deck')renderDeck();
   if(state.screen==='card')renderCard();
+  if(state.screen==='favorites')renderFavorites();
   if(state.screen==='about')renderAbout();
 }
+function renderOnboarding(){
+  app.innerHTML=`<section class="screen onboarding"><p class="eyebrow">CUIDADO EM AD</p><h1>Um jeito simples de abrir conversas.</h1><p class="onboarding-lead">Use os baralhos para refletir, conversar e registrar pequenos passos de cuidado.</p><div class="onboarding-steps"><div><b>1</b><span><strong>Escolha um tema</strong><small>Há baralhos para pessoas em acompanhamento, familiares e profissionais.</small></span></div><div><b>2</b><span><strong>Sorteie uma carta</strong><small>Leia com calma e use a pergunta como ponto de partida.</small></span></div><div><b>3</b><span><strong>Acompanhe seu caminho</strong><small>Favoritos, histórico, progresso e anotações ficam salvos neste dispositivo.</small></span></div></div><button class="primary" data-action="start-onboarding">Começar a usar <span>→</span></button><p class="onboarding-note">As anotações ficam privadas no aparelho. Use “Exportar dados” para transferi-las.</p></section>`;
+}
 function renderHome(){
-  app.innerHTML=`<section class="screen"><div class="intro"><p class="eyebrow">CUIDADO EM AD</p><h1>Baralhos para abrir conversas.</h1><p>Escolha um tema, sorteie uma carta e encontre uma pergunta que ajude a refletir com mais acolhimento.</p></div><div class="section-label"><h2>Escolha um baralho</h2><span>${decks.length} disponíveis</span></div><div class="deck-grid">${decks.map(deck=>`<article class="deck-card" data-deck="${deck.id}"><img src="${deck.cover}" alt="${esc(deck.title)}"><div class="deck-card-body"><span class="deck-type">${esc(deck.type)}</span><h3>${esc(deck.title)}</h3><small>${esc(deck.description)}</small><span class="deck-open">Abrir baralho →</span></div></article>`).join('')}</div><div class="info-card"><span class="info-icon">i</span><div><strong>Use no seu ritmo</strong><span>Você pode sortear uma carta, refletir e registrar uma anotação privada no próprio celular.</span></div></div></section>`;
+  const library=getLibrary();
+  const history=(library.history||[]).map(item=>({item,deck:getDeck(item.deckId)})).filter(row=>row.deck);
+  app.innerHTML=`<section class="screen"><div class="intro"><p class="eyebrow">CUIDADO EM AD</p><h1>Baralhos para abrir conversas.</h1><p>Escolha um tema, sorteie uma carta e encontre uma pergunta que ajude a refletir com mais acolhimento.</p></div><div class="home-tools"><button class="tool-button" data-action="favorites">♡ <span>Favoritos (${library.favorites.length})</span></button><button class="tool-button" data-action="export-data">⇩ <span>Exportar dados</span></button><label class="tool-button">⇧ <span>Importar dados</span><input class="sr-only" type="file" accept="application/json" data-action="import-data"></label><button class="tool-button" data-action="about">i <span>Como usar</span></button></div><div class="section-label"><h2>Escolha um baralho</h2><span>${decks.length} disponíveis</span></div><div class="deck-grid">${decks.map(deck=>{const seen=seenCount(deck);return `<article class="deck-card" data-deck="${deck.id}"><img src="${deck.cover}" alt="${esc(deck.title)}"><div class="deck-card-body"><span class="deck-type">${esc(deck.type)}</span><h3>${esc(deck.title)}</h3><small>${esc(deck.description)}</small><div class="deck-progress"><span>${seen}/${deck.cardCount} cartas vistas</span><i><b style="width:${Math.round(seen/deck.cardCount*100)}%"></b></i></div><span class="deck-open">Abrir baralho →</span></div></article>`}).join('')}</div>${history.length?`<div class="section-label history-heading"><h2>Continuar de onde parou</h2><span>últimos sorteios</span></div><div class="history-card">${history.slice(0,5).map(({item,deck})=>`<button class="history-row" data-history="${item.deckId}:${item.index}"><span><strong>${esc(deck.title)}</strong><small>Carta ${item.index+1} · ${safeDate(item.at)}</small></span><b>→</b></button>`).join('')}</div>`:''}<div class="info-card"><span class="info-icon">i</span><div><strong>Seus dados ficam com você</strong><span>Favoritos, progresso e anotações são salvos neste dispositivo. Exporte um arquivo para levar seus dados a outro aparelho.</span></div></div></section>`;
 }
 function renderDeckInfo(deck){
   const info=deck.info||{};
@@ -90,30 +108,40 @@ function renderDeckInfo(deck){
   return `<div class="deck-info">${info.author?`<p class="deck-author">${esc(info.author)}</p>`:''}${section(info.objectiveLabel,info.objective)}${section(info.howLabel,info.howToUse)}${section(info.audienceLabel,info.audience)}${section(info.focusLabel,info.focus)}${info.notes?`<div class="deck-note"><strong>${esc(info.notesLabel||'Observação')}</strong><p>${esc(info.notes)}</p></div>`:''}</div>`;
 }
 function renderDeck(){
-  const deck=getDeck(state.deckId);
-  app.innerHTML=`<section class="screen"><div class="deck-hero"><img src="${deck.cover}" alt="${esc(deck.title)}"><div><p class="eyebrow">${esc(deck.type)}</p><h1>${esc(deck.title)}</h1><p>${esc(deck.description)}</p><div class="deck-meta"><span class="pill">${deck.cardCount} cartas</span><span class="pill">Reflexão guiada</span></div></div></div><button class="primary" data-action="draw">Sortear uma carta <span>✦</span></button><div class="info-card"><span class="info-icon">?</span><div><strong>Como usar</strong><span>Leia a carta com calma, observe o que ela desperta e use a anotação para registrar uma ideia ou próximo passo.</span></div></div>${renderDeckInfo(deck)}</section>`;
+  const deck=getDeck(state.deckId);const seen=seenCount(deck);const fav=favoriteCount(deck);
+  app.innerHTML=`<section class="screen"><div class="deck-hero"><img src="${deck.cover}" alt="${esc(deck.title)}"><div><p class="eyebrow">${esc(deck.type)}</p><h1>${esc(deck.title)}</h1><p>${esc(deck.description)}</p><div class="deck-meta"><span class="pill">${deck.cardCount} cartas</span><span class="pill">${seen} vistas</span><span class="pill">${fav} favoritas</span></div></div></div><button class="primary" data-action="draw">Sortear uma carta <span>✦</span></button><div class="deck-actions"><button class="secondary" data-action="toggle-facilitator">${state.facilitator?'Sair do modo facilitador':'Modo facilitador'}</button><button class="secondary" data-action="unlock">Desbloquear pela Kiwify</button></div>${state.facilitator?`<div class="facilitator-panel"><strong>Modo facilitador</strong><span>Leia a carta em voz alta, dê tempo para cada pessoa responder e use as perguntas do material para aprofundar a conversa.</span></div>`:''}<div class="info-card"><span class="info-icon">i</span><div><strong>Como usar</strong><span>Leia a carta com calma, observe o que ela desperta e use a anotação para registrar uma ideia ou próximo passo.</span></div></div>${renderDeckInfo(deck)}</section>`;
 }
 function renderCard(){
-  const deck=getDeck(state.deckId);const index=state.cardIndex??0;const image=`./assets/cards/${cardFolders[deck.id]||deck.id}/card-${String(index+1).padStart(2,'0')}.png`;const notes=getNotes();const note=notes[`${deck.id}-${index}`]||'';
-  app.innerHTML=`<section class="screen card-screen"><p class="eyebrow">${esc(deck.title)}</p><p class="card-number">Carta ${index+1} de ${deck.cardCount}</p><article class="draw-card"><img class="draw-card-image" src="${image}" alt="Carta ${index+1} de ${esc(deck.title)}"></article><div class="card-actions"><button class="primary" data-action="draw">Sortear outra carta <span>↻</span></button><button class="secondary" data-action="deck">Voltar ao baralho</button></div><div class="note-box"><label for="note">Minha reflexão</label><textarea id="note" placeholder="Escreva uma palavra, ideia ou próximo passo...">${esc(note)}</textarea><button class="secondary" data-action="save-note" style="margin-top:9px">Salvar anotação</button></div></section>`;
+  const deck=getDeck(state.deckId);const index=state.cardIndex??0;const image=`./assets/cards/${cardFolders[deck.id]||deck.id}/card-${String(index+1).padStart(2,'0')}.png`;const notes=getNotes();const note=notes[`${deck.id}-${index}`]||'';const fav=isFavorite(deck,index);const text=cardText(deck,index);
+  app.innerHTML=`<section class="screen card-screen"><p class="eyebrow">${esc(deck.title)}</p><p class="card-number">Carta ${index+1} de ${deck.cardCount}</p><article class="draw-card"><img class="draw-card-image" src="${image}" alt="${esc(text)}"></article><details class="card-alt"><summary>Ver texto alternativo da carta</summary><p>${esc(text)}</p></details><div class="card-actions"><button class="primary" data-action="draw">Sortear outra carta <span>↻</span></button><button class="secondary" data-action="favorite">${fav?'♥ Remover dos favoritos':'♡ Adicionar aos favoritos'}</button><button class="secondary" data-action="toggle-facilitator">${state.facilitator?'Sair do modo facilitador':'Modo facilitador'}</button><button class="secondary" data-action="deck">Voltar ao baralho</button></div>${state.facilitator?`<div class="facilitator-panel"><strong>Facilitador</strong><span>Convide a pessoa ou o grupo a responder primeiro; depois, pergunte o que a carta despertou e qual pequeno passo pode ser experimentado.</span></div>`:''}<div class="note-box"><label for="note">Minha reflexão</label><textarea id="note" placeholder="Escreva uma palavra, ideia ou próximo passo...">${esc(note)}</textarea><button class="secondary" data-action="save-note" style="margin-top:9px">Salvar anotação</button></div></section>`;
+}
+function renderFavorites(){
+  const library=getLibrary();const items=library.favorites.map(key=>{const [deckId,index]=key.split('-');return {deck:getDeck(deckId),index:Number(index)}}).filter(item=>item.deck);
+  app.innerHTML=`<section class="screen"><p class="eyebrow">SEUS FAVORITOS</p><h1>Cartas para revisitar.</h1><p class="intro">As cartas que você marcou ficam reunidas aqui para voltar a elas quando quiser.</p>${items.length?`<div class="history-card favorites-list">${items.map(({deck,index})=>`<button class="history-row" data-history="${deck.id}:${index}"><span><strong>${esc(deck.title)}</strong><small>Carta ${index+1} · ${esc(cardText(deck,index))}</small></span><b>→</b></button>`).join('')}</div>`:'<div class="info-card"><span class="info-icon">♡</span><div><strong>Nenhuma carta favorita ainda</strong><span>Ao sortear uma carta, toque em “Adicionar aos favoritos”.</span></div></div>'}<button class="secondary" data-action="home">Voltar aos baralhos</button></section>`;
 }
 function renderAbout(){
-  app.innerHTML=`<section class="screen"><p class="eyebrow">SOBRE O MVP</p><h1>Um espaço para cuidar das conversas.</h1><p class="intro">O aplicativo transforma os materiais Cuidado em AD em uma experiência simples para reflexão individual, familiar ou em grupo.</p><ul class="about-list"><li>Escolha um dos 10 baralhos temáticos.</li><li>Sorteie uma carta e leia sem pressa.</li><li>Use a pergunta como ponto de partida para uma conversa.</li><li>Registre sua reflexão no próprio dispositivo.</li></ul><button class="primary" data-action="home">Conhecer os baralhos</button></section>`;
+  app.innerHTML=`<section class="screen"><p class="eyebrow">SOBRE O MVP</p><h1>Um espaço para cuidar das conversas.</h1><p class="intro">O aplicativo transforma os materiais Cuidado em AD em uma experiência simples para reflexão individual, familiar ou em grupo.</p><ul class="about-list"><li>Escolha um dos 10 baralhos temáticos.</li><li>Sorteie uma carta e leia sem pressa.</li><li>Use a pergunta como ponto de partida para uma conversa.</li><li>Registre sua reflexão no próprio dispositivo.</li><li>Use o modo facilitador para conduzir atendimentos e grupos.</li></ul><button class="primary" data-action="home">Conhecer os baralhos</button></section>`;
 }
-function draw(){
-  const deck=getDeck(state.deckId);let next=Math.floor(Math.random()*deck.cardCount);if(deck.cardCount>1&&next===state.cardIndex)next=(next+1)%deck.cardCount;state.cardIndex=next;state.screen='card';render();window.scrollTo({top:0,behavior:'smooth'});
-}
+function draw(){const deck=getDeck(state.deckId);let next=Math.floor(Math.random()*deck.cardCount);if(deck.cardCount>1&&next===state.cardIndex)next=(next+1)%deck.cardCount;state.cardIndex=next;state.screen='card';recordCard(deck,next);render();window.scrollTo({top:0,behavior:'smooth'})}
+function exportData(){const payload={version:1,exportedAt:new Date().toISOString(),notes:getNotes(),library:getLibrary()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='cuidado-em-ad-dados.json';link.click();URL.revokeObjectURL(url);showToast('Dados exportados.')}
 document.addEventListener('click',event=>{
   const deckCard=event.target.closest('[data-deck]');if(deckCard){state.deckId=deckCard.dataset.deck;state.cardIndex=null;state.screen='deck';render();return}
+  const history=event.target.closest('[data-history]');if(history){const [deckId,index]=history.dataset.history.split(':');state.deckId=deckId;state.cardIndex=Number(index);state.screen='card';render();return}
   const action=event.target.closest('[data-action]')?.dataset.action;if(!action)return;
+  if(action==='start-onboarding'){localStorage.setItem(onboardingKey,'1');state.screen='home';render();return}
   if(action==='home'){state.screen='home';state.deckId=null;state.cardIndex=null;render();return}
   if(action==='about'){state.screen='about';render();return}
   if(action==='back'){state.screen='home';state.deckId=null;state.cardIndex=null;render();return}
   if(action==='deck'){state.screen='deck';render();return}
   if(action==='draw'){draw();return}
-  if(action==='save-note'){
-    const deck=getDeck(state.deckId);const notes=getNotes();notes[`${deck.id}-${state.cardIndex}`]=document.querySelector('#note')?.value.trim()||'';localStorage.setItem(notesKey,JSON.stringify(notes));showToast('Anotação salva neste dispositivo.');return
-  }
+  if(action==='favorites'){state.screen='favorites';render();return}
+  if(action==='toggle-facilitator'){state.facilitator=!state.facilitator;render();return}
+  if(action==='unlock'){showToast('Envie o link ou ID do produto Kiwify para ativar o desbloqueio.');return}
+  if(action==='favorite'){const deck=getDeck(state.deckId);const key=favoriteKey(deck.id,state.cardIndex);const library=getLibrary();library.favorites=library.favorites||[];library.favorites=library.favorites.includes(key)?library.favorites.filter(item=>item!==key):[...library.favorites,key];saveLibrary(library);showToast(library.favorites.includes(key)?'Carta adicionada aos favoritos.':'Carta removida dos favoritos.');render();return}
+  if(action==='export-data'){exportData();return}
+  if(action==='save-note'){const deck=getDeck(state.deckId);const notes=getNotes();notes[`${deck.id}-${state.cardIndex}`]=document.querySelector('#note')?.value.trim()||'';localStorage.setItem(notesKey,JSON.stringify(notes));showToast('Anotação salva neste dispositivo.');return}
 });
+document.addEventListener('change',event=>{if(event.target.dataset.action!=='import-data')return;const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const payload=JSON.parse(reader.result);if(payload.notes)localStorage.setItem(notesKey,JSON.stringify(payload.notes));if(payload.library)localStorage.setItem(libraryKey,JSON.stringify(payload.library));showToast('Dados importados.');render()}catch{showToast('Não foi possível ler esse arquivo.')}};reader.readAsText(file)});
+if(!localStorage.getItem(onboardingKey))state.screen='onboarding';
 render();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
