@@ -147,7 +147,7 @@ render();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
 // Kiwify access gate for paid decks. The static PWA keeps a local test unlock;
 // production validation should be connected to a Kiwify webhook/backend.
-const kiwifyLinks={menosCigarro:'https://pay.kiwify.com.br/TSsocGz'};
+const kiwifyLinks={escolhas:'https://pay.kiwify.com.br/ccGv4fr',conversar:'https://pay.kiwify.com.br/VIXUEig',rotulos:'https://pay.kiwify.com.br/QDXF6PJ',cuidar:'https://pay.kiwify.com.br/8zMs8RR',pause:'https://pay.kiwify.com.br/5Bx8HtG',relampago:'https://pay.kiwify.com.br/vh33eXh',craving:'https://pay.kiwify.com.br/Cav7ORk',menosCigarro:'https://pay.kiwify.com.br/TSsocGz',autocompaixao:'https://pay.kiwify.com.br/5KURvqs',estacaZero:'https://pay.kiwify.com.br/MHlRBpQ'};
 const unlocksKey='cuidado-em-ad-unlocks-v1';
 const getUnlocks=()=>{try{return JSON.parse(localStorage.getItem(unlocksKey)||'{}')}catch{return {}}};
 const saveUnlocks=value=>localStorage.setItem(unlocksKey,JSON.stringify(value));
