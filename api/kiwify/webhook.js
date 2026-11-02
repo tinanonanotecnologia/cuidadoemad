@@ -42,7 +42,16 @@ export default async function handler(req, res) {
   let payload;
   try { payload = JSON.parse(raw); } catch { return res.status(400).json({ error: 'invalid_json' }); }
   const expectedProduct = String(process.env.KIWIFY_PRODUCT_ID || '').trim();
+  const newProductId = String(process.env.KIWIFY_PRODUCT_ID_MINHAS_QUALIDADES || process.env.KIWIFY_MINHAS_QUALIDADES_PRODUCT_ID || '').trim();
   const productId = findValue(payload, ['product_id', 'productid', 'id_product', 'product']);
+  const productName = findValue(payload, ['product_name', 'product_title', 'title', 'name']);
+  const productReference = findValue(payload, ['checkout_url', 'product_url', 'offer_url']);
+  const productText = `${productName} ${productReference}`.toLowerCase();
+  let productKey = '';
+  if (newProductId && productId === newProductId) productKey = 'minhasQualidades';
+  else if (/minhas\s+qualidades|baralho[^\n]*qualidades/.test(productText) || /08tzolz/i.test(productReference)) productKey = 'minhasQualidades';
+  else if (!expectedProduct || !productId || productId === expectedProduct) productKey = 'menosCigarro';
+  if (!productKey) return res.status(200).json({ ignored: true, reason: 'different_product' });
 
   const eventText = [
     findValue(payload, ['event', 'event_type', 'type']),
@@ -68,7 +77,7 @@ export default async function handler(req, res) {
     },
     body: JSON.stringify([{
       purchaser_email: email,
-      product_key: 'menosCigarro',
+      product_key: productKey,
       kiwify_product_id: productId || expectedProduct || null,
       kiwify_order_id: orderId,
       status: approved ? 'active' : 'refunded',
@@ -78,4 +87,3 @@ export default async function handler(req, res) {
   if (!response.ok) return res.status(502).json({ error: 'entitlement_write_failed' });
   return res.status(200).json({ received: true, status: approved ? 'active' : 'refunded' });
 }
-
