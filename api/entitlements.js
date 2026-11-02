@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const email = String(user.email || '').trim().toLowerCase();
   if (!email) return res.status(403).json({ error: 'email_required' });
 
-  const base = `${supabaseUrl.replace(/\/$/, '')}/rest/v1/entitlements?select=product_key,status&product_key=eq.menosCigarro&status=eq.active`;
+  const base = `${supabaseUrl.replace(/\/$/, '')}/rest/v1/entitlements?select=product_key,status&status=eq.active`;
   const headers = { apikey: secretKey, Authorization: `Bearer ${secretKey}` };
   const [byEmail, byUser] = await Promise.all([
     fetch(`${base}&purchaser_email=eq.${encodeURIComponent(email)}`, { headers }),
@@ -32,7 +32,11 @@ export default async function handler(req, res) {
   ]);
   const emailRows = byEmail && byEmail.ok ? await byEmail.json() : [];
   const userRows = byUser && byUser.ok ? await byUser.json() : [];
-  const unlocked = [...emailRows, ...userRows].some(row => row.product_key === 'menosCigarro' && row.status === 'active');
-  return res.status(200).json({ email, entitlements: { menosCigarro: unlocked } });
+  const entitlements = {};
+  for (const row of [...emailRows, ...userRows]) {
+    const productKey = String(row.product_key || '').trim();
+    if (productKey && row.status === 'active') entitlements[productKey] = true;
+  }
+  return res.status(200).json({ email, entitlements });
 }
 
