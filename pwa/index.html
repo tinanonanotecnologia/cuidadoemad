@@ -11,6 +11,11 @@
   <title>Cuidado em AD · Baralhos</title>
 </head>
 <body>
+  <div id="install-banner" class="install-banner" role="status" aria-live="polite" hidden>
+    <span id="install-message">Instale o Cuidado em AD no seu celular para acessar seus baralhos com mais facilidade.</span>
+    <button id="install-button" type="button">Instalar aplicativo</button>
+    <button id="install-close" type="button" aria-label="Fechar aviso">×</button>
+  </div>
   <div class="app-shell">
     <header class="app-header"><div class="pwa-splash" aria-hidden="true"><img src="./assets/logo-3d.png" alt=""></div>
       <button class="top-action is-hidden" data-action="back" aria-label="Voltar"><img class="back-button-art" src="./assets/back-button.png" alt=""></button>
@@ -22,6 +27,45 @@
     <main id="app" aria-live="polite"></main>
   </div>
   <div id="toast" class="toast" role="status"></div>
+  <script>
+    (() => {
+      let deferredInstallPrompt = null;
+      const banner = document.querySelector("#install-banner");
+      const installButton = document.querySelector("#install-button");
+      const closeButton = document.querySelector("#install-close");
+      const message = document.querySelector("#install-message");
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia("(max-width: 760px)").matches;
+      const showBanner = () => {
+        if (banner && isMobile && !isStandalone) banner.hidden = false;
+      };
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if (installButton) installButton.textContent = "Instalar aplicativo";
+        showBanner();
+      });
+      installButton?.addEventListener("click", async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          banner.hidden = true;
+          return;
+        }
+        if (message) message.textContent = "No menu do navegador, toque em “Adicionar à tela inicial” ou “Instalar aplicativo”.";
+        if (installButton) installButton.hidden = true;
+      });
+      closeButton?.addEventListener("click", () => {
+        banner.hidden = true;
+      });
+      window.addEventListener("appinstalled", () => {
+        banner.hidden = true;
+        deferredInstallPrompt = null;
+      });
+      if (isMobile && !isStandalone) window.setTimeout(showBanner, 900);
+    })();
+  </script>
   <script src="./app.js"></script>
 </body>
 </html>
