@@ -1,5 +1,5 @@
-const CACHE='cuidado-em-ad-mvp-v15';
-const CORE=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./assets/logo-tight.svg'];
+const CACHE='cuidado-em-ad-mvp-v16';
+const CORE=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./assets/logo-tight.svg','./assets/logo-3d.png','./assets/logo-3d-192.png','./assets/logo-3d-512.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));
 });
@@ -21,4 +21,3 @@ self.addEventListener('fetch',event=>{
     })
   );
 });
-
