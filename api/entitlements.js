@@ -24,6 +24,9 @@ export default async function handler(req, res) {
   const email = String(user.email || '').trim().toLowerCase();
   if (!email) return res.status(403).json({ error: 'email_required' });
 
+  const adminEmails = String(process.env.PWA_ADMIN_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+  if (adminEmails.includes(email)) return res.status(200).json({ email, admin: true, entitlements: { all: true } });
+
   const base = `${supabaseUrl.replace(/\/$/, '')}/rest/v1/entitlements?select=product_key,status&status=eq.active`;
   const headers = { apikey: secretKey, Authorization: `Bearer ${secretKey}` };
   const [byEmail, byUser] = await Promise.all([
