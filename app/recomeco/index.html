@@ -260,6 +260,7 @@
     .wavy .wavy-heart::before { content: "♡"; position: absolute; inset: -7px 0 0; color: #e99e75; font-size: 52px; line-height: 1; text-align: center; }
     .register-question { margin: 0 0 13px; font-size: 26px; line-height: 1.04; letter-spacing: -.05em; font-weight: 900; }
     .options-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .options-grid.drugs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .option {
       position: relative;
       display: grid;
@@ -469,7 +470,7 @@
           '<div class="segmented"><button class="' + (registerTab === 'drinks' ? 'active' : '') + '" data-tab="drinks">Bebidas alcoólicas</button><button class="' + (registerTab === 'drugs' ? 'active' : '') + '" data-tab="drugs">Outras drogas</button></div>' +
           '<div class="wavy"><span class="' + (registerTab === 'drinks' ? 'wavy-sun' : 'wavy-heart') + '"></span></div>' +
           '<h2 class="register-question">' + (registerTab === 'drinks' ? 'Qual bebida você bebeu?' : 'O que você usou?') + '</h2>' +
-          '<div class="options-grid">' + list.map(function (item, index) {
+          '<div class="options-grid ' + (registerTab === 'drugs' ? 'drugs-grid' : 'drinks-grid') + '">' + list.map(function (item, index) {
             return '<button class="option ' + (selectedOption === index ? 'selected' : '') + '" data-option="' + index + '">' + (selectedOption === index ? '<span class="check">✓</span>' : '') + svg(item[0]) + '<span>' + item[1] + '</span></button>';
           }).join('') + '</div>' +
           (registerTab === 'drinks'
