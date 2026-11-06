@@ -198,7 +198,7 @@ document.querySelectorAll('[data-nav-icon]').forEach(function (slot) {
 });
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function () {});
+    navigator.serviceWorker.register('/app/recomeco/sw.js', { scope: '/app/recomeco/' }).catch(function () {});
   });
 }
 render();
